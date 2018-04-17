@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+//consider https://github.com/dwmkerr/consolecontrol
+
 namespace umineko_cs_installer
 {
     class Program
@@ -13,7 +15,11 @@ namespace umineko_cs_installer
 
         static void Main(string[] args)
         {
+            UminekoQuestionInstaller inst = new UminekoQuestionInstaller();
+            inst.doInstall();
 
+            Console.WriteLine("Task Finished...");
+            Console.ReadKey();
         }
     }
 }

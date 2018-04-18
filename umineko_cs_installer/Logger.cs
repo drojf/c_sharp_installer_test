@@ -52,7 +52,7 @@ namespace InstallUtils
 
         public void LogOK(string string_to_log, bool end = true)
         {
-            LogColor(string_to_log, ConsoleColor.White, ConsoleColor.Green, end, " ok ");
+            LogColor(string_to_log, ConsoleColor.Green, ConsoleColor.Black, end, " ok ");
         }
 
         public void LogWarn(string string_to_log, bool end = true)
@@ -67,7 +67,7 @@ namespace InstallUtils
 
         public void LogCodeError(string string_to_log, bool end = true)
         {
-            LogColor(string_to_log, ConsoleColor.Green, ConsoleColor.Black, end, "err ");
+            LogColor(string_to_log, ConsoleColor.DarkRed, ConsoleColor.Black, end, "err ");
         }
 
         public void LogColor(string string_to_log, ConsoleColor foreground_color, ConsoleColor background_color, bool end, string textDescription="misc")   

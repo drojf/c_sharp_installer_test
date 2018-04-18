@@ -14,7 +14,7 @@ namespace umineko_cs_installer
     {
         static void Main(string[] args)
         {
-            UminekoQuestionInstaller inst = new UminekoQuestionInstaller(@"c:\temp4\test");
+            UminekoQuestionInstaller inst = new UminekoQuestionInstaller(@"C:\temp\installer_test", @"C:\temp\download_folder");
             inst.doInstall();
             
             Console.WriteLine("Task Finished...");

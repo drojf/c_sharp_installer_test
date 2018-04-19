@@ -14,6 +14,7 @@ namespace umineko_cs_installer
     {
         protected readonly string gameFolderPath;       //root directory of game folder
         protected readonly string sevenZipPath;
+        protected readonly string aria2cPath;
         protected readonly string downloadFolderPath;   //temporary location where files are downloaded
         protected readonly Logger logger;
         
@@ -23,7 +24,7 @@ namespace umineko_cs_installer
             downloadFolderPath = _downloadFolder;
             logger = new Logger(Path.Combine(gameFolderPath, "seventh_mod_patcher.log"));
             sevenZipPath = @"C:\temp\installer_test\temp\7za.exe";
-
+            aria2cPath = @"C:\temp\installer_test\temp\aria2c.exe";
             //try and create the download folder
             TryCreateDir(downloadFolderPath);
         }
@@ -78,72 +79,26 @@ namespace umineko_cs_installer
             }
         }
 
-        //see https://stackoverflow.com/questions/240171/launching-an-application-exe-from-c
         /// <summary>
-        /// 
+        /// Extracts a downloaded file (assumes it is in the download folder)
         /// </summary>
-        /// <param name="exePath"></param>
-        /// <param name="arguments"></param>
-        /// <returns>Returns True if successful, False otherwise</returns>
-        protected bool Run(string exePath, string arguments) => IRun(exePath, arguments) == 0;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="exePath"></param>
-        /// <param name="arguments"></param>
-        /// <returns>call this if you want the integer return value from a process</returns>
-        protected int IRun(string exePath, string arguments)
-        {
-            Process proc = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = exePath,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    //CreateNoWindow = true
-                }
-            };
-
-            logger.Log($"Running: '{exePath}' Args: '{arguments}'");
-            
-            // Run the external process & wait for it to finish
-            proc.Start();
-            proc.WaitForExit();
-            
-            return proc.ExitCode;
-        }
-
-        /// <summary>
-        /// Extract a file to the root directory of the game folder
-        /// </summary>
-        /// <param name="filePath"></param>
+        /// <param name="filename"></param>
         /// <returns></returns>
-        protected bool ExtractFile(string filePath)
-        {
-            string arguments = $"x {filePath} -aoa -o{gameFolderPath}";
-            logger.Log($"Begin 7zip Extracting '{filePath}' to '{gameFolderPath}'");
-            bool extractionSuccessful = Run(sevenZipPath, arguments);
-            if(extractionSuccessful)
-            {
-                logger.LogOK($"Extraction of {filePath} OK");
-                return true;
-            }
-            else
-            {
-                logger.LogError($"Error during extraction of {filePath}");
-                return false;
-            }
-        }
-
         protected bool ExtractDownloadedFile(string filename)
         {
-            return ExtractFile(Path.Combine(downloadFolderPath, filename));
+            return ExternalProgramRunner.ExtractFile(sevenZipPath, Path.Combine(downloadFolderPath, filename), gameFolderPath, logger);
         }
 
         //TODO: DownloadMetafile
+        /// <summary>
+        /// Begins Download of a metalink file. All downloaded files are placed in the download folder.
+        /// </summary>
+        /// <param name="metaLinkURL"></param>
+        /// <returns></returns>
+        protected bool DownloadToDownloadFolder(string metaLinkURL)
+        {
+            return ExternalProgramRunner.DownloadMetaLink(aria2cPath, metaLinkURL, downloadFolderPath, logger);
+        }
 
         //TODO: DownloadFile
 

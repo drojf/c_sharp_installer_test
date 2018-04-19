@@ -3,7 +3,10 @@ using System.IO;
 
 namespace InstallUtils
 {
-    class Logger
+    //TODO: convert into singleton (use static constructor to init on startup
+    //then call secondary function to set log file location
+    //this will tidy the code up.
+    public class Logger
     {
         public StreamWriter logFile;
         bool shouldLogToFile;

@@ -9,26 +9,43 @@ using System.Threading.Tasks;
 
 namespace umineko_cs_installer
 {
-    ///<summary>This class contains implementation shared by all the installers</summary>
+    class InstallSettings
+    {
+        public readonly string gameFolderPath;       //root directory of game folder
+        public readonly string sevenZipPath;
+        public readonly string aria2cPath;
+        public readonly string downloadFolderPath;   //temporary location where files are downloaded
+
+        public InstallSettings(string gameFolderPath, string downloadFolderPath, string sevenZipPath, string aria2cPath)
+        {
+            this.gameFolderPath = gameFolderPath;
+            this.downloadFolderPath = downloadFolderPath;
+            this.sevenZipPath = sevenZipPath;   //path to seven zip exe (including exe, as if calling on command line)
+            this.aria2cPath = aria2cPath;       //path to aria2c exe (including exe, as if calling on command line)
+        }
+    }
+
+    /// This class contains implementation shared by all the installers
     class InstallerBase
     {
-        protected readonly string gameFolderPath;       //root directory of game folder
-        protected readonly string sevenZipPath;
-        protected readonly string aria2cPath;
-        protected readonly string downloadFolderPath;   //temporary location where files are downloaded
+        protected readonly InstallSettings settings;
         protected readonly Logger logger;
         
-        protected InstallerBase(string _gamefolderPath, string _downloadFolder)
+        protected InstallerBase(InstallSettings settings)
         {
-            gameFolderPath = _gamefolderPath;
-            downloadFolderPath = _downloadFolder;
-            logger = new Logger(Path.Combine(gameFolderPath, "seventh_mod_patcher.log"));
-            sevenZipPath = @"C:\temp\installer_test\temp\7za.exe";
-            aria2cPath = @"C:\temp\installer_test\temp\aria2c.exe";
+            this.settings = settings;
+
+            //must set the logger immediately so that it can be used by the other functions
+            this.logger = new Logger(Path.Combine(settings.gameFolderPath, "seventh_mod_patcher.log"));
+
             //try and create the download folder
-            TryCreateDir(downloadFolderPath);
+            TryCreateDir(settings.downloadFolderPath);
         }
 
+        // Tries to create a directory with the given path
+        // If the folder exists, true returned, no action taken.
+        // If folder doesn't exist, the function will try to create it;
+        // true returned if creation successful, false otherwise.
         protected bool TryCreateDir(string path)
         {
             try
@@ -51,14 +68,26 @@ namespace umineko_cs_installer
                 return false;
             }
         }
-        protected string RelPath(string path) => Path.Combine(gameFolderPath, path);
+
+        // creates an absolute path string, given a relative path string from the game folder
+        // eg 'temp\test.exe' will convert to '{gamefolder}\temp\test.exe'
+        protected string RelPath(string path) => Path.Combine(settings.gameFolderPath, path);
+
+        // checks if a path exists, where 'path' is a path relative to the game folder
         protected bool RelPathExists(string path) => File.Exists(RelPath(path));
+
+        // moves a file, where both the source and destination paths are relative to the game folder
+        // TODO: make this work on folders as well?
         protected void RelFileMove(string sourceFileName, string destFileName)
         {
             File.Move(RelPath(sourceFileName), RelPath(destFileName));
         }
-        //TODO: Maybe just move the files to be deleted to a separate folder, for safety.
 
+        //TODO: Maybe just move the files to be deleted to a separate folder, for safety.
+        
+
+        // Prompts the user with 'promptString' to answer Y/N. 
+        // Returns true if Y is pressed, false if N is pressed
         protected bool userAnsweredYes(string promptString)
         {
             logger.LogWarn(promptString, end: false);
@@ -78,80 +107,70 @@ namespace umineko_cs_installer
                 logger.LogWarn("Please type 'Y' or 'N'");
             }
         }
-
-        /// <summary>
-        /// Extracts a downloaded file (assumes it is in the download folder)
-        /// </summary>
-        /// <param name="filename"></param>
-        /// <returns></returns>
+        
+        /// Extracts a downloaded file to the game folder path (assumes it is in the download folder)
         protected bool ExtractDownloadedFile(string filename)
         {
-            return ExternalProgramRunner.ExtractFile(sevenZipPath, Path.Combine(downloadFolderPath, filename), gameFolderPath, logger);
+            return ExternalProgramRunner.ExtractFile(settings.sevenZipPath, Path.Combine(settings.downloadFolderPath, filename), settings.gameFolderPath, logger);
         }
 
-        //TODO: DownloadMetafile
-        /// <summary>
         /// Begins Download of a metalink file. All downloaded files are placed in the download folder.
-        /// </summary>
-        /// <param name="metaLinkURL"></param>
-        /// <returns></returns>
         protected bool DownloadToDownloadFolder(string metaLinkURL)
         {
-            return ExternalProgramRunner.DownloadMetaLink(aria2cPath, metaLinkURL, downloadFolderPath, logger);
+            return ExternalProgramRunner.DownloadMetaLink(settings.aria2cPath, metaLinkURL, settings.downloadFolderPath, logger);
         }
 
         //TODO: DownloadFile
 
     }
 
-    ///<summary>Returns true if install succeeded, false otherwise</summary>
+    /// Returns true if install succeeded, false otherwise
     class UminekoQuestionInstaller : InstallerBase
     {
-        public UminekoQuestionInstaller(string _gamefolderPath, string _downloadFolder) : base(_gamefolderPath, _downloadFolder)
+        public UminekoQuestionInstaller(InstallSettings settings) : base(settings)
         {
 
         }
         
         public bool doInstall()
         {
-
-                //check correct installation folder
-                //TODO: list some files from the game folder? or open EXPLORER window?
-                if (!RelPathExists("arc.nsa"))
+            //check correct installation folder
+            //TODO: list some files from the game folder? or open EXPLORER window?
+            if (!RelPathExists("arc.nsa"))
+            {
+                logger.LogWarn($"It looks like you selected the wrong install folder (you chose '{settings.gameFolderPath}')");
+                if (!userAnsweredYes("Do you want to install anyway? [y / n]"))
                 {
-                    logger.LogWarn($"It looks like you selected the wrong install folder (you chose '{gameFolderPath}')");
-                    if (!userAnsweredYes("Do you want to install anyway? [y / n]"))
-                    {
-                        logger.LogError("Install Cancelled - Wrong Directory");
-                        return false;
-                    }
+                    logger.LogError("Install Cancelled - Wrong Directory");
+                    return false;
                 }
+            }
 
-                //rename Umineko1to4 and 0.utf to keep a backup
-                try
-                {
-                    RelFileMove("Umineko1to4.exe", "Umineko1to4_old.exe");
-                    RelFileMove("0.utf", "0_old.utf");
-                }
-                catch (Exception e)
-                {
-                    logger.LogWarn("Error backing up umineko1to4.exe or 0.utf - continuing install anyway");
-                    logger.LogCodeError(e.ToString());
-                }
+            //rename Umineko1to4 and 0.utf to keep a backup
+            try
+            {
+                RelFileMove("Umineko1to4.exe", "Umineko1to4_old.exe");
+                RelFileMove("0.utf", "0_old.utf");
+            }
+            catch (Exception e)
+            {
+                logger.LogWarn("Error backing up umineko1to4.exe or 0.utf - continuing install anyway");
+                logger.LogCodeError(e.ToString());
+            }
 
-                logger.Log("Downloading and verifying all files. You can close and reopen this at any time, your progress will be saved.");
+            logger.Log("Downloading and verifying all files. You can close and reopen this at any time, your progress will be saved.");
+            DownloadToDownloadFolder(@"https://github.com/07th-mod/resources/raw/master/umineko-question/umi_full.meta4");
 
+            logger.Log("Extracting Files");
+            ExtractDownloadedFile("test.zip");
 
-                logger.Log("Extracting Files");
-                ExtractDownloadedFile("test.zip");
-
-                //TODO: use this to copy one directory to another: https://docs.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories
-
-
-                //TODO: Maybe just move the files to be deleted to a separate folder, for safety.
+            //TODO: use this to copy one directory to another: https://docs.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories
 
 
-                logger.Log("Install Finished Successfully");
+            //TODO: Maybe just move the files to be deleted to a separate folder, for safety.
+
+
+            logger.Log("Install Finished Successfully");
             
             /*catch(FileNotFoundException fileNotFoundException)
             {

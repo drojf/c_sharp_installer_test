@@ -14,7 +14,12 @@ namespace umineko_cs_installer
     {
         static void Main(string[] args)
         {
-            UminekoQuestionInstaller inst = new UminekoQuestionInstaller(@"C:\temp\installer_test", @"C:\temp\download_folder");
+            InstallSettings installSettings = new InstallSettings(
+                gameFolderPath: @"C:\temp4\test_cs_installer",
+                downloadFolderPath: @"C:\temp4\test_cs_installer\downloads",
+                sevenZipPath: @"C:\temp4\test_cs_installer\temp\7za.exe",
+                aria2cPath: @"C:\temp4\test_cs_installer\temp\aria2c.exe");
+            UminekoQuestionInstaller inst = new UminekoQuestionInstaller(installSettings);
             inst.doInstall();
             
             Console.WriteLine("Task Finished...");

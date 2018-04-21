@@ -83,15 +83,21 @@ namespace InstallUtils
 
         private void LogLowLevel(string string_to_log, string logType, bool end)
         {
-            // Output something like "[ERR ] File was not found"
-            string string_to_log_with_type = $"[{logType,4}] {string_to_log}";
-
-            Console.Write(string_to_log_with_type);
-            if(end)
+            //only include the type of log if it's not blank/null
+            string logTypeString = "";
+            if(logType != null && logType != "")
             {
-                Console.WriteLine("");
+                logTypeString = $"[{logType,4}] ";
             }
 
+            //prepare line ending
+            string lineEnding = end ? "\n" : "";
+
+            // Output something like "[ERR ] File was not found"
+            string string_to_log_with_type = $"{logTypeString}{string_to_log}{lineEnding}";
+
+            //output to console and file
+            Console.Write(string_to_log_with_type);
             if (shouldLogToFile)
             {
                 logFile.WriteLine(string_to_log_with_type);
